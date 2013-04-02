@@ -1,0 +1,178 @@
+#!/bin/sh
+#
+# /etc/init.d/<%= @name %> -- startup script for the <%= @name %>
+#
+# Written by Miquel van Smoorenburg <miquels@cistron.nl>.
+# Modified for Debian GNU/Linux	by Ian Murdock <imurdock@gnu.ai.mit.edu>.
+# Modified for Tomcat by Stefan Gybas <sgybas@debian.org>.
+# Modified for Tomcat6 by Thierry Carrez <thierry.carrez@ubuntu.com>.
+# Modified for Tomcat7 by Ernesto Hernandez-Novich <emhn@itverx.com.ve>.
+# Additional improvements by Jason Brittain <jason.brittain@mulesoft.com>.
+# Modified for jbossas7 by Joshua Buysse <buysse@umn.edu>
+#
+### BEGIN INIT INFO
+# Provides:          <%= @name %>
+# Required-Start:    $local_fs $remote_fs $network
+# Required-Stop:     $local_fs $remote_fs $network
+# Should-Start:      $named
+# Should-Stop:       $named
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start JBoss AS 7.
+# Description:       Start the JBoss Application Server 7 engine.
+### END INIT INFO
+
+set -e
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME=<%= @name %>
+DESC="JBossAS7 servlet engine"
+DEFAULT=/etc/default/$NAME
+JVM_TMP=/tmp/jbossas7-tmp
+JBOSS_PIDFILE=/var/run/$NAME.pid
+
+if [ `id -u` -ne 0 ]; then
+	echo "You need root privileges to run this script"
+	exit 1
+fi
+ 
+# Make sure tomcat is started with system locale
+if [ -r /etc/default/locale ]; then
+	. /etc/default/locale
+	export LANG
+fi
+
+. /lib/lsb/init-functions
+
+if [ -r /etc/default/rcS ]; then
+	. /etc/default/rcS
+fi
+
+
+# The following variables can be overwritten in $DEFAULT
+
+# Run JBoss as this user ID and group ID
+JBOSS_USER=<%= @user %>
+JBOSS_UMASK=022
+
+# JBoss AS will use this variable if it exists.
+export JBOSS_PIDFILE
+
+# The first existing directory is used for JAVA_HOME (if JAVA_HOME is not
+# defined in $DEFAULT)
+JDK_DIRS="/usr/lib/jvm/java-6-openjdk /usr/lib/jvm/java-6-sun /usr/lib/jvm/java-1.5.0-sun /usr/lib/j2sdk1.5-sun /usr/lib/j2sdk1.5-ibm"
+
+# Look for the right JVM to use
+for jdir in $JDK_DIRS; do
+    if [ -r "$jdir/bin/java" -a -z "${JAVA_HOME}" ]; then
+      JAVA_HOME="$jdir"
+    fi
+done
+export JAVA_HOME
+
+# End of variables that can be overwritten in $DEFAULT
+
+# overwrite settings from default file
+if [ -f "$DEFAULT" ]; then
+	. "$DEFAULT"
+fi
+
+umask $JBOSS_UMASK
+
+case "$1" in
+  start)
+  	if [ -z "$JAVA_HOME" ]; then
+  		log_failure_msg "no JDK found - please set JAVA_HOME"
+  		exit 1
+  	fi
+
+  	if [ ! -d "$JBOSS_HOME" ]; then
+  		log_failure_msg "invalid JBOSS_HOME: $JBOSS_HOME"
+  		exit 1
+  	fi
+
+  	log_daemon_msg "Starting $DESC" "$NAME"
+  	if start-stop-daemon -v --test --start --pidfile "$JBOSS_PIDFILE" \
+  		--user $JBOSS_USER  --exec "$JAVA_HOME/bin/java" \
+  		>/dev/null; then
+  		export JBOSS_PIDFILE
+
+  		su - $JBOSS_USER -c "env JBOSS_PIDFILE=$JBOSS_PIDFILE JAVA_HOME=$JAVA_HOME $JBOSSSH &" 
+  		sleep 5
+      if start-stop-daemon -v --test --start --pidfile "$JBOSS_PIDFILE" \
+  			--user $JBOSS_USER --exec "/bin/sh" \
+  			; then
+  			if [ -f "$JBOSS_PIDFILE" ]; then
+  				rm -f "$JBOSS_PIDFILE"
+  			fi
+  			log_end_msg 1
+  		else
+  			log_end_msg 0
+  		fi
+  	else
+  	  log_progress_msg "(already running)"
+  		log_end_msg 0
+  	fi
+  	;;
+  stop)
+    log_daemon_msg "Stopping $DESC" "$NAME"
+
+    set +e
+    if [ -f "$JBOSS_PIDFILE" ]; then 
+    	start-stop-daemon --stop --pidfile "$JBOSS_PIDFILE" \
+    		--user "$JBOSS_USER" \
+    		--retry=TERM/20/KILL/5 >/dev/null
+    	if [ $? -eq 1 ]; then
+    		log_progress_msg "$DESC is not running but pid file exists, cleaning up"
+    	elif [ $? -eq 3 ]; then
+    		PID="`cat $JBOSS_PIDFILE`"
+    		log_failure_msg "Failed to stop $NAME (pid $PID)"
+    		exit 1
+    	fi
+    	rm -f "$JBOSS_PIDFILE"
+    	rm -rf "$JVM_TMP"
+    else
+    	log_progress_msg "(not running)"
+    fi
+    log_end_msg 0
+    set -e
+    ;;
+  status)
+    set +e
+    start-stop-daemon -v --test --start --pidfile "$JBOSS_PIDFILE" \
+    	--user $JBOSS_USER --exec "/bin/sh" \
+    	>/dev/null 2>&1
+    if [ "$?" = "0" ]; then
+    	if [ -f "$JBOSS_PIDFILE" ]; then
+        log_success_msg "$DESC is not running, but pid file exists."
+    	  exit 1
+    	else
+    	  log_success_msg "$DESC is not running."
+    		exit 3
+    	fi
+    else
+    	log_success_msg "$DESC is running with pid `cat $JBOSS_PIDFILE`"
+    fi
+    set -e
+          ;;
+    restart|force-reload)
+    if [ -f "$JBOSS_PIDFILE" ]; then
+    	$0 stop
+    	sleep 1
+    fi
+	  $0 start
+  	;;
+  try-restart)
+    if start-stop-daemon --test --start --pidfile "$JBOSS_PIDFILE" \
+  		--user $JBOSS_USER --exec "/bin/sh" \
+  		>/dev/null; then
+  		$0 start
+  	fi
+    ;;
+  *)
+	log_success_msg "Usage: $0 {start|stop|restart|try-restart|force-reload|status}"
+	exit 1
+	;;
+esac
+
+exit 0

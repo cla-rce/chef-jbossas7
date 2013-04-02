@@ -2,18 +2,23 @@
 
 ## Description
 
-Installs/configures JBoss AS 7 or Red Hat JBoss Enterprise Application Platform
-6. Automatically can create standalone instances or a secure and complete JBoss
-domain setup.
+Installs/configures JBoss AS 7.  Automatically can create standalone 
+instances or a secure and complete JBoss domain setup.
 
 ## Requirements
 
 ### Platforms
 
-* RedHat 6.3 (Santiago)
+* Ubuntu 12.04 (precise)
 
 ## Attributes
-
+* `node["jbossas7"]["install_dir"]` - base directory to unpack JBoss to
+* `node["jbossas7"]["version"]` - version to download and install, defaults to 
+  "7.1.1.Final".  
+* `node["jbossas7"]["download_url"]` - URL to download from, defaults to 
+  "http://download.jboss.org/jbossas/7.1/jboss-as-7.1.1.Final/jboss-as-7.1.1.Final.tar.gz"
+* TODO: default["jbossas7"]["user"]                      = "jboss"
+* TODO: default["jbossas7"]["group"]                     = "jboss"
 * `node["jbossas7"]["hostname"]` - alpha-numeric ONLY JBoss AS
   server name used in domain mode (must match with mgmt-user entry), defaults to
   `node["hostname"].gsub(/[-_]/,"")`
@@ -39,17 +44,10 @@ domain setup.
 * `node["jbossas7"]["domain"]["name"]` - for multiple clusters,
   defaults to nil
 
-### JBoss EAP6 Specific Attributes
-
-* `node["jbossas7"]["eap6"]["packages"]` - JBoss EAP6 server installation
-  packages, see defaults in `attributes/default.rb`
-
-## Recipes
+# Recipes
 
 * `recipe[jbossas7]` will install and configure JBoss AS 7
 * `recipe[jbossas7::configuration]` attribute-driven configuration
-* `recipe[jbossas7::eap6]` will install and configure Red Hat JBoss EAP 6
-  (includes AS 7)
 
 ## Usage
 
@@ -135,8 +133,9 @@ interfaces:
 ## License and Author
       
 Author:: Brian Flad (<bflad@wharton.upenn.edu>)
+Author:: Joshua Buysse (<buysse@umn.edu>)
 
-Copyright:: 2012
+Copyright:: 2012, 2013
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -19,4 +19,48 @@
 
 # To-Do!
 
+# create the users for the installation
+
+group node["jbossas7"]["group"] do 
+  action :create
+  system true
+end
+
+user node["jbossas7"]["user"] do 
+  action [:create, :manage]
+  supports :manage_home => true
+  system true
+  comment "JBoss AS7 application user"
+  shell "/bin/bash"
+  home node["jbossas7"]["home"]
+  gid node["jbossas7"]["group"]
+end
+
+# unpack the installation
+ark node["jbossas7"]["ark_package_name"] do 
+  url node["jbossas7"]["download_url"]
+  # path seems non-functional, will install in /usr/local
+  #path node["jbossas7"]["ark_base_dir"]
+  version node["jbossas7"]["version"]
+  checksum node["jbossas7"]["download_checksum"]
+  owner node["jbossas7"]["user"]
+  group node["jbossas7"]["group"]
+end
+
+# set up an initscript for it?  
+template "/etc/init.d/jbossas7" do 
+  source "jbossas7.init.debian.erb"
+  variables :name => "jbossas7",  
+    :user => node["jbossas7"]["user"]
+  mode "0755"
+  owner "root"
+  group "root"
+  notifies :enable, "service[jbossas7]"
+end
+
+service "jbossas7" do 
+  action :nothing
+  supports :restart => true, :start => true, :stop => true, :reload => true
+end
+  
 include_recipe "jbossas7::configuration"

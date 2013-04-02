@@ -41,7 +41,7 @@ JAVA_HOME=<%= node["java"]["java_home"] %>
 
 #
 # Define where jboss is - this is the directory containing directories appclient, bin, bundles, docs, domain etc
-JBOSS_HOME="/usr/share/jbossas"
+JBOSS_HOME="<%= node['jbossas7']['install_dir'] %>"
 #
 # Make sure java is on your path
 # JAVAPTH="$JAVA_HOME/bin"

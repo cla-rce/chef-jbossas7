@@ -21,52 +21,61 @@ if JBossAS7.domain_slave?(node)
   JBossAS7.add_domain_master(node) unless JBossAS7.has_domain_master?(node)
 end
 
-template "/etc/jbossas/jbossas.conf" do
+## /etc/syssconfig-type script, input for initscript
+# can be rebuilt for initscript input
+template "#{node["jbossas7"]["default_dir"]}/jbossas7" do
   source "jbossas.conf.erb"
-  owner "jboss"
-  group "jboss"
+  owner node["jbossas7"]["user"]
+  group node["jbossas7"]["group"]
   mode "0644"
-  notifies :restart, resources(:service => "jbossas"), :delayed
+  notifies :restart, resources(:service => "jbossas7"), :delayed
 end
 
-template "#{node["jbossas7"]["home"]}/bin/#{node["jbossas7"]["mode"]}.conf" do
+# actual jboss config file
+directory "#{node['jbossas7']['install_dir']}/bin" do 
+  owner node["jbossas7"]["user"]
+  group node["jbossas7"]["group"]
+  mode "0755"
+end
+
+template "#{node['jbossas7']['install_dir']}/bin/#{node["jbossas7"]["mode"]}.conf" do
   source "#{node["jbossas7"]["mode"]}.conf.erb"
-  owner "jboss"
-  group "jboss"
+  owner node["jbossas7"]["user"]
+  group node["jbossas7"]["group"]
   mode "0644"
-  notifies :restart, resources(:service => "jbossas"), :delayed
+  notifies :restart, resources(:service => "jbossas7"), :delayed
 end
 
 if JBossAS7.domain_master?(node)
-  template "#{node["jbossas7"]["home"]}/domain/configuration/host-master.xml" do
+  template "#{node['jbossas7']['install_dir']}/domain/configuration/host-master.xml" do
     source "host-master-initial.xml.erb"
-    owner "jboss"
-    group "jboss"
+    owner node["jbossas7"]["user"]
+    group node["jbossas7"]["group"]
     mode "0644"
     only_if "grep -q 'name=\"master\"' #{node["jbossas7"]["home"]}/domain/configuration/host-master.xml"
-    notifies :restart, resources(:service => "jbossas"), :delayed
+    notifies :restart, resources(:service => "jbossas7"), :delayed
   end
 end
 
 if JBossAS7.domain_slave?(node)
   JBossAS7.create_hostname_mgmt_user(node) unless JBossAS7.hostname_mgmt_user(node)
 
-  template "#{node["jbossas7"]["home"]}/domain/configuration/host-slave.xml" do
+  template "#{node['jbossas7']['install_dir']}/domain/configuration/host-slave.xml" do
     source "host-slave-initial.xml.erb"
-    owner "jboss"
-    group "jboss"
+    owner node["jbossas7"]["user"]
+    group node["jbossas7"]["group"]
     mode "0644"
     variables :secret => JBossAS7.hostname_mgmt_user(node)["secret"]
-    only_if "grep -q 'c2xhdmVfdXNlcl9wYXNzd29yZA==' #{node["jbossas7"]["home"]}/domain/configuration/host-slave.xml"
-    notifies :restart, resources(:service => "jbossas"), :delayed
+    only_if "grep -q 'c2xhdmVfdXNlcl9wYXNzd29yZA==' #{node['jbossas7']['install_dir']}/domain/configuration/host-slave.xml"
+    notifies :restart, resources(:service => "jbossas7"), :delayed
   end
 end
 
 JBossAS7.add_domain_slaves_mgmt_users(node) if JBossAS7.domain_master?(node)
 
-template "#{node["jbossas7"]["home"]}/#{node["jbossas7"]["mode"]}/configuration/mgmt-users.properties" do
+template "#{node['jbossas7']['install_dir']}/#{node["jbossas7"]["mode"]}/configuration/mgmt-users.properties" do
   source "mgmt-users.properties.erb"
-  owner "jboss"
-  group "jboss"
+  owner node["jbossas7"]["user"]
+  group node["jbossas7"]["group"]
   mode "0644"
 end
