@@ -34,7 +34,7 @@ default["jbossas7"]["home"]                      = "/var/lib/jbossas7"
 default["jbossas7"]["hostname"]                  = node["hostname"].gsub(/[-_]/,"")
 default["jbossas7"]["JBOSS_MODULES_SYSTEM_PKGS"] = []
 default["jbossas7"]["LD_LIBRARY_PATH"]           = nil
-default["jbossas7"]["mgmt-users"]                = []
+default["jbossas7"]["mgmt-users"]                = {}
 default["jbossas7"]["mode"]                      = "standalone"
 
 case platform_family

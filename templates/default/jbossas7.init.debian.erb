@@ -164,7 +164,7 @@ case "$1" in
   	;;
   try-restart)
     if start-stop-daemon --test --start --pidfile "$JBOSS_PIDFILE" \
-  		--user $JBOSS_USER --exec "/bin/sh" \
+  		--user $JBOSS_USER --exec "$JAVA_HOME/bin/java" \
   		>/dev/null; then
   		$0 start
   	fi
